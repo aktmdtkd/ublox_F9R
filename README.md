@@ -5,9 +5,14 @@
 
 아래는 실행 명령어입니다.
 
+home에 ublox_ws에 있다고 가정하고, 여기에 만든다고 할 때
+
 ```source ~/ublox_ws/install/setup.bash; ```
 
-```ros2 run ublox_gps ublox_gps_node --ros-args --params-file ~/ublox_ws/config/ublox_config.yaml;```
+그리고 설정 yaml파일의 위치를 잘 맞추셔야합니다.
+
+```ros2 run ublox_gps ublox_gps_node --ros-args --params-file config/ublox_config.yaml;```
+
 
 ---
 
