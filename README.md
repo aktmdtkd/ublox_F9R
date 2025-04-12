@@ -1,3 +1,14 @@
+# Masik Part
+이 레포지토리는 ublox의 gps드라이버를 수정한 것입니다.
+
+만든 이유는 제가 사용하는 GPS가 ZED-F9R 기반이고, 사용하는 PC가 Ubuntu 22.04에 ROS2 Humble인데, 잘 맞지 않은 부분이 조금 있어서 Fork하여 새로 작성하게 되었습니다.
+
+아래는 실행 명령어입니다.
+```source ~/ublox_ws/install/setup.bash; ```
+```ros2 run ublox_gps ublox_gps_node --ros-args --params-file ~/ublox_ws/config/ublox_config.yaml;```
+
+---
+
 # ublox
 The `ublox` package provides support for [u-blox](http://www.u-blox.com) GPS receivers. Only the _serial_ configuration of the driver is documented here, but TCP/UDP communication is also supported by the driver (untested).
 
