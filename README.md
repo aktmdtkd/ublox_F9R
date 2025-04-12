@@ -1,17 +1,86 @@
 # Masik Part
+
+## 사용 설명
 이 레포지토리는 ublox의 gps드라이버를 수정한 것입니다.
 
 만든 이유는 제가 사용하는 GPS가 ZED-F9R 기반이고, 사용하는 PC가 Ubuntu 22.04에 ROS2 Humble인데, 잘 맞지 않은 부분이 조금 있어서 Fork하여 새로 작성하게 되었습니다.
 
+이게 여러가지 엎치락 뒤치락 해서, ublox를 fork하긴 했는데... 좀 많이 다르게 되었습니다.
+
 아래는 실행 명령어입니다.
 
-home에 ublox_ws에 있다고 가정하고, 여기에 만든다고 할 때
+home에 ublox_ws에 있다고 가정하고, 여기에 만든다고 할 때 당연히 이런 위치에 git clone 해주셔야 합니다.
+
+'~/ublox_ws/src'
+
+그리고 ublox_ws에서 colcon build 해주시고
+
+```cd ~/ublox_ws```
+
+```colcon build```
 
 ```source ~/ublox_ws/install/setup.bash; ```
 
-그리고 설정 yaml파일의 위치를 잘 맞추셔야합니다.
+그리고 설정 yaml파일의 위치를 잘 맞추셔야합니다. 경우에 따라서 다를 수 있으니 ublox_config.yaml은 각자 상황에 맞게 만들어주세요.
 
 ```ros2 run ublox_gps ublox_gps_node --ros-args --params-file config/ublox_config.yaml;```
+
+저는 그냥 이걸 .bashrc에 축약어로 넣었습니다.
+
+```alias gnss_driver='source ~/ublox_ws/install/setup.bash; ros2 run ublox_gps ublox_gps_node --ros-args --params-file ~/ublox_ws/config/ublox_config.yaml;'```
+
+그러면 그냥 ```gnss_driver```만 써도 됩니다. gns 만 치고 Tab 치면 나오는 수준이죠.
+
+위에 yaml 위치도 제 설정이라서, 맞게 바꿔주시면 됩니다.
+
+## 바뀐점
+대체로 크게 바뀌었는데, 저도 막 작업하다가 이것 저건 손보면서 만들어진 것이라 잘 기억이 나진 않습니다.
+
+자잘한 것들은 ublox나 ublox_gnss 같은 레포지토리를 참고했고, F9R을 지원하는 레포지토리들도 많이 참고했습니다.
+
+굵직한 친구들 중에서 수정한 것은 다음과 같습니다.
+
+1) yaml 파일 따로 만들어서 사용한 것
+이건 별도로 설명하진 않겠습니다. 사용하려고 애쓰다 보니 필요했습니다.
+
+2) IMU 오프셋 조정
+ublox_gps/src/adr_udr_product.cpp 부분을 보면 아래에 크게 주석이 된 부분과 활성화된 부분이 있다. 샘플로 보면 다음과 같음.
+
+```
+if (data_type == 14) {
+  if (data_sign == 1) {
+    imu_.angular_velocity.x = 2048 * ( 3.14159265359 / 180 ) - data_value * rad_per_sec;
+  } else {
+    imu_.angular_velocity.x = data_sign * data_value * rad_per_sec;
+  }
+} else if (data_type == 16) {
+  //RCLCPP_INFO(node_->get_logger(), "data_sign: %f", data_sign);
+  //RCLCPP_INFO(node_->get_logger(), "data_value: %u", data_value * m);
+  //원래 8191이었는데, 오차가 있어서 직감으로 2^13인 8192바꿨더니 오차 확 사라짐
+  if (data_sign == 1) {
+    imu_.linear_acceleration.x = 8192 - data_value * m_per_sec_sq;
+  } else {
+    imu_.linear_acceleration.x = data_sign * data_value * m_per_sec_sq;
+  }
+```
+
+위 linear랑 angular랑 둘 다 이상했었는데...
+linear의 경우 2^13인 8192가 아니라 1을 뺀 8191이었고, angular의 경우 2048이었다.
+
+나중에 알고보니, linear의 오차는 저 1을 괜히 뺀 값인 8191을 써서 문제였고,
+angular의 경우 2048을 그냥 쓰면 안되고, 저걸 라디안 디그리 변환을 거쳐야 했었다.
+
+그게 근삿값이 35.75였는데(이 값을 어떻게 찾았는가? 알고싶지 않았다.) 이게 우연하게도 2048 * ( 3.14159265359 / 180 )과 가까워서 극적으로 정체를 알게 된 것.
+
+3) 사용 USB 포트 등
+본인의 경우 ttyACM1이 되었었음.
+
+바꾸셔야 한다면 이걸 명령어 쳐서 어떤 곳이 지금 GPS랑 연결된 곳인지 봐야한다.
+
+```ls /dev/ttyACM*```
+
+```sudo dmesg | grep tty```
+
 
 
 ---

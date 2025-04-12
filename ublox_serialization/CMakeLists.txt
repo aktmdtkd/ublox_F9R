@@ -1,14 +1,21 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 
 project(ublox_serialization)
 
-find_package(catkin REQUIRED COMPONENTS roscpp roscpp_serialization)
+find_package(ament_cmake REQUIRED)
 
-catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp roscpp_serialization)
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 
 install(DIRECTORY include/
-  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
-  PATTERN ".svn" EXCLUDE
+  DESTINATION include/${PROJECT_NAME}
 )
+install(TARGETS ${PROJECT_NAME} EXPORT export_${PROJECT_NAME})
+
+ament_export_include_directories("include/${PROJECT_NAME}")
+
+ament_export_targets(export_${PROJECT_NAME})
+
+ament_package()

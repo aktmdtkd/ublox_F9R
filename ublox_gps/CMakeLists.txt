@@ -1,80 +1,111 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(ublox_gps)
-find_package(catkin REQUIRED COMPONENTS
-  tf
-  roscpp
-  roscpp_serialization
-  ublox_msgs
-  ublox_serialization
-  diagnostic_updater
-  rtcm_msgs
-  nmea_msgs
-)
 
-catkin_package(
-    INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}
-    CATKIN_DEPENDS tf roscpp ublox_msgs ublox_serialization rtcm_msgs nmea_msgs)
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
-# include boost
-find_package(Boost REQUIRED COMPONENTS system regex thread)
-link_directories(${Boost_LIBRARY_DIR})
-include_directories(${Boost_INCLUDE_DIR})
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-# include other ublox packages
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${catkin_INCLUDE_DIRS})
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-# link pthread
-SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
-
-# build library
-add_library(ublox_gps src/gps.cpp)
-
-# fix msg compile order bug
-add_dependencies(ublox_gps ${catkin_EXPORTED_TARGETS})
-
-target_link_libraries(ublox_gps
-  boost_system
-  boost_regex
-  boost_thread
-)
-
-target_link_libraries(ublox_gps
-  ${catkin_LIBRARIES}
-)
+find_package(ament_cmake_ros REQUIRED)
+find_package(asio REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nmea_msgs REQUIRED)
+find_package(rcl_interfaces REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(rtcm_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(ublox_msgs REQUIRED)
+find_package(ublox_serialization REQUIRED)
 
 # build node
-add_executable(ublox_gps_node src/node.cpp src/mkgmtime.c src/raw_data_pa.cpp)
-set_target_properties(ublox_gps_node PROPERTIES OUTPUT_NAME ublox_gps)
+add_library(ublox_gps
+  src/adr_udr_product.cpp
+  src/gnss.cpp
+  src/gps.cpp
+  src/hp_pos_rec_product.cpp
+  src/hpg_ref_product.cpp
+  src/hpg_rov_product.cpp
+  src/mkgmtime.c
+  src/node.cpp
+  src/raw_data_pa.cpp
+  src/raw_data_product.cpp
+  src/tim_product.cpp
+  src/ublox_firmware.cpp
+  src/ublox_firmware6.cpp
+  src/ublox_firmware7.cpp
+  src/ublox_firmware8.cpp
+  src/ublox_firmware9.cpp)
+target_include_directories(ublox_gps PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+  ${diagnostic_updater_INCLUDE_DIRS}
+)
+target_link_libraries(ublox_gps PUBLIC
+  ${asio_LIBRARIES}
+  ${diagnostic_updater_LIBRARIES}
+  ${diagnostic_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${rcl_interfaces_TARGETS}
+  rclcpp::rclcpp
+  rclcpp_components::component
+  ${nmea_msgs_TARGETS}
+  ${rtcm_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  tf2::tf2
+  ${ublox_msgs_TARGETS}
+  ublox_serialization::ublox_serialization
+)
 
-target_link_libraries(ublox_gps_node boost_system boost_regex boost_thread)
-target_link_libraries(ublox_gps_node ${catkin_LIBRARIES})
-target_link_libraries(ublox_gps_node ublox_gps)
+install(TARGETS ublox_gps EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+add_executable(ublox_gps_node src/node_main.cpp)
+target_link_libraries(ublox_gps_node PRIVATE
+  rclcpp::rclcpp
+  ublox_gps
+)
 
 # build logger node
-add_executable(ublox_logger_node src/logger_node_pa.cpp src/raw_data_pa.cpp)
-set_target_properties(ublox_logger_node PROPERTIES OUTPUT_NAME ublox_logger)
-
-target_link_libraries(ublox_logger_node ${catkin_LIBRARIES})
-
-install(TARGETS ublox_gps ublox_gps_node ublox_logger_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+add_executable(ublox_logger src/logger_node_pa.cpp src/raw_data_pa.cpp)
+target_link_libraries(ublox_logger PRIVATE
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ublox_gps
 )
 
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  PATTERN ".svn" EXCLUDE
+install(TARGETS
+  ublox_gps_node ublox_logger
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY config/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
-  PATTERN ".svn" EXCLUDE
+rclcpp_components_register_nodes(ublox_gps
+  "ublox_node::UbloxNode")
+
+install(DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME}
 )
 
-install(DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-  PATTERN ".svn" EXCLUDE
+install(
+  DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
 )
+
+ament_export_include_directories("include/${PROJECT_NAME}")
+ament_export_targets(export_${PROJECT_NAME})
+
+ament_package()
