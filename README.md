@@ -46,6 +46,14 @@ home에 ublox_ws에 있다고 가정하고, 여기에 만든다고 할 때 당�
 2) IMU 오프셋 조정
 ublox_gps/src/adr_udr_product.cpp 부분을 보면 아래에 크게 주석이 된 부분과 활성화된 부분이 있다. 샘플로 보면 다음과 같음.
 
+## NTRIP
+이것에 관해서는 따로 만든 것이 있습니다.
+
+[aktmdtkd/ntrip_client](https://github.com/aktmdtkd/ntrip_client)
+여기로 가서 따라하시면 됩니다.
+
+제 PC 환경은 Ubuntu 22.04, ROS2 Humble입니다.
+
 ```
 if (data_type == 14) {
   if (data_sign == 1) {
